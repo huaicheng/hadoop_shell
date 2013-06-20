@@ -1,0 +1,10 @@
+
+
+192.168.0.200	mn-yuan-master
+192.168.0.201	mn-yuan-slave01
+192.168.0.202	mn-yuan-slave02
+192.168.0.203   mn-yuan-slave03
+192.168.0.204   mn-yuan-slave04
+192.168.0.205   mn-yuan-slave05
+192.168.0.206   mn-yuan-slave06
+192.168.0.207   mn-yuan-slave07
