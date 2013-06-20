@@ -32,8 +32,8 @@ if [ 1 = $use_s3 ]; then
 	hdfs_data_dir="s3n://free-tier-yuan/hadoop/input/simpleTest"
 	hdfs_output_dir="s3n://free-tier-yuan/hadoop/results/simpleTest-$(date +%F_%H-%M-%S)"
 else
-	hdfs_data_dir="/user/hduser/yuan"
-	hdfs_output_dir="/user/hduser/yuan-output"
+	hdfs_data_dir="/user/hduser/input"
+	hdfs_output_dir="/user/hduser/output"
 fi
 
 
@@ -42,11 +42,11 @@ run_task=1
 
 hadoop_tmp_dir="/mnt/hadoop/tmp"
 
-cluster_host_name="cluster_hosts.txt"
+cluster_host_name="vcluster_hosts.txt"
 
-master_name="mn-yuan-master"
+master_name="vmaster"
 
-hadoop_dir="/usr/local/hadoop"
+hadoop_dir="/opt/hadoop"
 script_dir="$hadoop_dir/scripts"
 monitor_script_name="list_process.sh"
 data_dir="/data/wiki"

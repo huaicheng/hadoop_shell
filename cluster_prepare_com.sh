@@ -6,22 +6,22 @@
 #
 # This script uses cluster_host_name file as a config file
 # 		cluster_host_name is a hosts file, Note: it starts with a blank line
-#		the name of master is mn-yuan-master, the names of slaves are mn-yuan-slaveXX, XX is the number of node
+#		the name of master is mn-yuan-master, the names of slaves are vslaveXX, XX is the number of node
 # Example:
 #
-# 	192.168.67.134	mn-yuan-master
-#	192.168.67.135	mn-yuan-slave01
-#	192.168.67.136	mn-yuan-slave02
-#	192.168.67.137	mn-yuan-slave03
+# 	192.168.67.134	vmaster
+#	192.168.67.135	vslave01
+#	192.168.67.136	vslave02
+#	192.168.67.137	vslave03
 #===================================
 
-cluster_host_name="cluster_hosts.txt"
+cluster_host_name="vcluster_hosts.txt"
 
 hadoop_tmp_dir="/mnt/hadoop/tmp"
 
 tasktracker_map_tasks_maximum=2
 tasktracker_red_tasks_maximum=1
-slave_num=`cat $cluster_host_name | grep slave | awk '{print $2}' | wc -l`
+slave_num=`cat $cluster_host_name | grep vslave | awk '{print $2}' | wc -l`
 let "reduce_task_num=$tasktracker_red_tasks_maximum*$slave_num"
 dfs_replication=1
 
@@ -38,7 +38,7 @@ function flush_core_site
 <configuration>
 <!-- In: conf/core-site.xml -->
 <property><name>hadoop.tmp.dir</name><value>$hadoop_tmp_dir</value></property> 
-<property><name>fs.default.name</name><value>hdfs://mn-yuan-master:54310</value></property>
+<property><name>fs.default.name</name><value>hdfs://vmaster:54310</value></property>
 </configuration>
 
 _EOF_
@@ -57,7 +57,7 @@ function flush_mapred_site
 <!-- Put site-specific property overrides in this file. -->
 <configuration>
 <!-- In: conf/mapred-site.xml -->
-<property><name>mapred.job.tracker</name><value>mn-yuan-master:54311</value></property>
+<property><name>mapred.job.tracker</name><value>vmaster:54311</value></property>
 <property><name>mapred.tasktracker.map.tasks.maximum</name><value>$tasktracker_map_tasks_maximum</value></property>
 <property><name>mapred.tasktracker.reduce.tasks.maximum</name><value>$tasktracker_red_tasks_maximum</value></property>
 <property><name>mapred.reduce.tasks</name><value>$reduce_task_num</value></property>
@@ -108,8 +108,8 @@ slaves_conf_fname="../conf/slaves"
 if [ "$master_ip" = "$current_ip" ]; then
 	#Master set
 	echo "Setting mn-yuan-master"
-	echo mn-yuan-master > $master_conf_fname
-	cat $cluster_host_name | grep slave | awk '{print $2}' > $slaves_conf_fname
+	echo vmaster > $master_conf_fname
+	cat $cluster_host_name | grep vslave | awk '{print $2}' > $slaves_conf_fname
 	
 	# Prepare the slaves
 	script_dir="/usr/local/hadoop/scripts"
