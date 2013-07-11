@@ -8,3 +8,5 @@ for i in $(cat phosts.txt | grep -Ev "^$|#")
 do
     sshpass -p$PASSWD scp copy_base.sh hduser@$i:~/
 done
+
+echo "done"
