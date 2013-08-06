@@ -1,4 +1,5 @@
 #!/bin/bash
+# get the system resource state when hadoop jobs running.
 
 index=0
 THISHOST=$(hostname)
@@ -6,9 +7,9 @@ USERNAME=$(id -un)
 
 
 
-function GetCpu 
+function GetCpu #pid
 { 
-	CpuValue=`ps -p $1 -o pcpu |grep -v CPU | awk '{print $1}' ` 
+    CpuValue=`ps -p $1 -o pcpu |grep -v CPU | awk '{print $1}' `  # $1 is the pid number
 	if [ "$CpuValue" = "" ]
 	then
 		CpuValue=0
@@ -32,6 +33,7 @@ function GetVSZ
 
 GetBandwidth_l_last_rx=1
 GetBandwidth_l_last_tx=1
+
 function GetBandwidth 
 {
 	echo Nothing
@@ -82,7 +84,7 @@ function MatchName
 # Main process
 
 flush_index=0
-ow=0
+ow=`date +%s`
 rx_byte=0
 tx_byte=0
 
@@ -126,8 +128,21 @@ for i in $(jps); do
 done
 #------------------------
 
+
+cpu_log=$(cat /proc/stat | grep "cpu " | awk '{print $2,$3,$4,$5,$6,$7,$8,$9,$10}')
+total_cpu_time_last=$(echo $cpu_log | awk '{print $1+$2+$3+$4+$5+$6+$7+$8+$9}')
+idle_cpu_time_last=$(echo $cpu_log | awk '{print $4}')
+
+network_log=$(cat /proc/net/dev | grep "eth0")
+receive_bytes_last=$(echo $network_log | awk '{print $2}')
+transmit_bytes_last=$(echo $network_log | awk '{print $10}')
+
+disk_log=$(cat /proc/diskstats | grep "vda ")
+read_sectors_last=$(echo $disk_log | awk '{print $6}')
+written_sectors_last=$(echo $disk_log | awk '{print $10}')
+
 while [ 1 ]; do
-	sleep 5
+	sleep 2
 
 	let "flush_index+=1"
 	last_ow=$ow
@@ -175,28 +190,60 @@ while [ 1 ]; do
 	
 	
 	#Collect the total bandwidth data
+
 	p_name='Total'
 	p_id=0
-	ps -Ao pid,%cpu,vsz,rss | grep -v VSZ> $tmp_file
-	cpu_usage=$(cat $tmp_file | awk '{sum +=$2}; END {print sum}')
-	mem_vsz=$(cat $tmp_file | awk '{sum +=$3}; END {print sum}')
-	mem_rss=$(cat $tmp_file | awk '{sum +=$4}; END {print sum}')
-	#rm $tmp_file
-	let "time_past=$ow-$last_ow"
-	let "r_bandwidth=$rx_byte-$last_rx_byte"
-	let "r_bandwidth=$r_bandwidth/$time_past"
-	let "t_bandwidth=$tx_byte-$last_tx_byte"
-	let "t_bandwidth=$t_bandwidth/$time_past"
-	
-	# Collect disk io data (KB/s)
-	let "r_sector_rate=$r_sector-$last_r_sector"
-	let "r_sector_rate=$r_sector_rate/$time_past"
-	let "w_sector_rate=$w_sector-$last_w_sector"
-	let "w_sector_rate=$w_sector_rate/$time_past"
-	let "disk_r_rate=$r_sector_rate*512"
-	let "disk_w_rate=$w_sector_rate*512"
-	
-	echo $ow $flush_index $THISHOST $USERNAME $p_name $p_id  $cpu_usage $mem_vsz $mem_rss $r_bandwidth $t_bandwidth $disk_r_rate $disk_w_rate
+    
+    # total cpu usage monitor
+	#ps -Ao pid,%cpu,vsz,rss | grep -v VSZ> $tmp_file
+	#cpu_usage=$(cat $tmp_file | awk '{sum +=$2}; END {print sum}')
+    cpu_log=$(cat /proc/stat | grep "cpu " | awk '{print $2,$3,$4,$5,$6,$7,$8,$9,$10}')
+    total_cpu_time=$(echo $cpu_log | awk '{print $1+$2+$3+$4+$5+$6+$7+$8+$9}')
+    idle_cpu_time=$(echo $cpu_log | awk '{print $4}')
+    total_cpu=`expr $total_cpu_time - $total_cpu_time_last`
+    total_idle=`expr $idle_cpu_time - $idle_cpu_time_last`
+    cpu_usage=$(echo "scale=0; 100 - 100* $total_idle / $total_cpu" | bc -l)
+
+    total_cpu_time_last=$total_cpu_time
+    idle_cpu_time_last=$idle_cpu_time
+
+    # total memory usage monitor
+    cat /proc/meminfo > $tmp_file
+    total_mem=$(cat $tmp_file | grep "MemTotal" | cut -d: -f2 | awk '{print $1}') # unit: KB
+
+    free_mem=$(cat $tmp_file | grep "MemFree" | cut -d: -f2 | awk '{print $1}') 
+    buffers=$(cat $tmp_file | grep "Buffers" | cut -d: -f2 | awk '{print $1}')
+    cached=$(cat $tmp_file | grep "^Cached" | cut -d: -f2 | awk '{print $1}')
+    usable_mem=`expr $free_mem + $buffers + $cached`
+    mem_usage=$(echo "scale=0; 100 * ($total_mem - $usable_mem) / $total_mem" | bc -l)
+
+	#mem_vsz=$(cat $tmp_file | awk '{sum +=$3}; END {print sum}')
+	#mem_rss=$(cat $tmp_file | awk '{sum +=$4}; END {print sum}')
+
+    # network monitor
+    network_log=$(cat /proc/net/dev | grep "eth0")
+    receive_bytes=$(echo $network_log | awk '{print $2}') # unit: byte
+    transmit_bytes=$(echo $network_log | awk '{print $10}')
+    total_receive_bytes=$(expr $receive_bytes - $receive_bytes_last)
+    total_transmit_bytes=$(expr $transmit_bytes - $transmit_bytes_last)
+    receive_bytes_last=$receive_bytes
+    transmit_bytes_last=$transmit_bytes
+    time_past=$(expr $ow - $last_ow)
+    echo $time_past
+    receive_rate=$(echo "scale=0; 8 * $total_receive_bytes / $time_past / 1024 / 1024" | bc -l) # unit: Mbps
+    transmit_rate=$(echo "scale=0;8 * $total_transmit_bytes / $time_past / 1024 / 1024" | bc -l)
+
+    # disk monitor
+    disk_log=$(cat /proc/diskstats | grep "vda ")
+    read_sectors=$(echo $disk_log | awk '{print $6}')
+    written_sectors=$(echo $disk_log | awk '{print $10}') # unit: sector
+    total_read_sectors=$(expr $read_sectors - $read_sectors)
+    total_write_sectors=$(expr $written_sectors - $written_sectors_last)
+    read_rate=$(echo "scale=0; $total_read_sectors / 256 / $time_past" | bc -l)
+    write_rate=$(echo "scale=0; $total_write_sectors / 256 / $time_past" | bc -l)
+
+	printf "%-10s %-6s %-8s %-6s %-7s %-5s %-6s %-6s %-5s %-5s %-5s %-5s\n" $ow $flush_index $THISHOST \
+        $USERNAME $p_name $p_id  $cpu_usage $mem_usage $receive_rate $transmit_rate $read_rate $write_rate
 	
 	#Collect the process data
 	for p_id in $(ps aux | grep java | grep -v grep | awk '{print $2}'); do
@@ -220,7 +267,7 @@ while [ 1 ]; do
 		t_bandwidth=0
 		disk_r_rate=0
 		disk_w_rate=0	
-		echo $ow $flush_index $THISHOST $USERNAME $p_name $p_id  $cpu_usage $mem_vsz $mem_rss $r_bandwidth $t_bandwidth $disk_r_rate $disk_w_rate
+		#echo $ow $flush_index $THISHOST $USERNAME $p_name $p_id  $cpu_usage $mem_vsz $mem_rss $r_bandwidth $t_bandwidth $disk_r_rate $disk_w_rate
 	done
 		
 done	
