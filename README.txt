@@ -13,8 +13,8 @@ Prerequisite:
 Example steps:
 We will build a cluster with 1 master and 4 slaves (all types are small)for example.	
  	1) Create 5 small instances using BasicNode image;
-	2) You choose one instanse as master, and write "cluster_hosts.txt". 
-	3) Copy the scripts files (files, not folder) to master node, the location is /usr/local/hadoop/scripts
+	2) You choose one instanse as master, and write "vcluster_hosts.txt". 
+	3) Copy the scripts files (files, not folder) to master node, the location is $HADOOP
 	4) Run "all_in_one.sh" or run "basics.sh, cluster_prepare_com.sh, run_hadoop_task.sh" in turn.
  	
 ====================
