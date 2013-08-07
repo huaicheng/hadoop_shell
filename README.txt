@@ -27,20 +27,19 @@ File description:
 
 --------------------
 Configuration file:
-The cluster configuration file is "cluster_hosts.txt". The format is: For every line, we specify the private IP and hostnames. 
-The first line is for master node. The hostname is default "mn-yuan-master". 
-The other lines are for slave nodes. The format is "mn-yuan-slaveXX".
+The cluster configuration file is "vcluster_hosts.txt". The format is: For every line, we specify the private IP and hostnames. 
+The first line is for master node. The hostname is default "vmaster". 
+The other lines are for slave nodes. The format is "vslaveXX".
 For example:
-10.72.55.244	mn-yuan-master
-10.151.89.13	mn-yuan-slave01
-10.151.22.106	mn-yuan-slave02
-10.151.53.132	mn-yuan-slave03
-10.151.86.126	mn-yuan-slave04
+192.168.0.145 vmaster
+192.168.0.146 vslave01
+192.168.0.147 vslave02
+192.168.0.148 vslave03
 
 --------------------
 basics.sh
 Basic configuration settings for the cluster. It set hostname, SSH, network and synchronize time.
-After running this file, you can visit every node in this cluster by hostname "ssh mn-yuan-xxxx" at any node in cluster.
+After running this file, you can visit every node in this cluster by hostname "ssh vslaveXX" at any node in cluster.
 
 --------------------
 cluster_prepare_com.sh
@@ -63,5 +62,3 @@ Steps:
 --------------------
 Tool_kill_ps_in_cluster.sh
 A subroutine script for clearing monitoring environment. It kills all monitoring process in the cluster.
-
- 
